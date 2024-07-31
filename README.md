@@ -1,9 +1,11 @@
 
 # Achievables
 
-This repository contains a Java 
+This repository contains a Java library that defines "Achievables," a system that can be used to define Achievements, Daily Challenges, Quests, and other things that players can "achieve" in a video game-like setting.
 
+This codebase also includes an extensible Groovy-based programming language called BIGAL (BigAl's Integrated Groovy Achievement Language) that allows you to define Achievables (with other metadata necessary to define an Achievement) in a human-readable and version-controllable format.
 
+We use Achievables on MCParks to power Daily Challenges and Achievements.
 
 # BIGAL version 0
 
