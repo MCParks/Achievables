@@ -9,31 +9,18 @@ import us.mcparks.achievables.Achievables;
 import us.mcparks.achievables.triggers.AchievableTrigger;
 import us.mcparks.achievables.events.PlayerEvent;
 import us.mcparks.achievables.triggers.EventAchievableTrigger;
+import us.mcparks.achievables.utils.AchievableGsonManager;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 
 public interface Achievable {
     // Returns a collection of triggers that this Achievable is capable of responding to
     Collection<AchievableTrigger.Type> getTriggers();
-    Gson gson = new GsonBuilder().registerTypeAdapter(Multimap.class,
-                    (JsonSerializer<Multimap>) (multimap, type, jsonSerializationContext) -> jsonSerializationContext.serialize(multimap.asMap()))
-            .registerTypeAdapter(Multimap.class,
-                    (JsonDeserializer<Multimap>) (jsonElement, type, jsonDeserializationContext) -> {
-                        final SetMultimap<AchievableTrigger.Type, String> map = Multimaps.newSetMultimap(new HashMap<>(),
-                                () -> Sets.newHashSet());
-                        for (Map.Entry<String, JsonElement> entry : ((JsonObject) jsonElement).entrySet()) {
-                            for (JsonElement element : (JsonArray) entry.getValue()) {
-                                map.get(new AchievableTrigger.Type(entry.getKey()))
-                                        .add(element.getAsString());
-                            }
-                        }
-                        return map;
-                    })
-            .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-            .create();
 
     // Returns true if the player has achieved this Achievable
     boolean isSatisfied(AchievablePlayer player);
@@ -81,7 +68,11 @@ public interface Achievable {
         getApplicablePlayers().remove(player);
     }
 
+
+
+
+
     default String toJson() {
-        return gson.toJson(this);
+        return AchievableGsonManager.getGson().toJson(this);
     }
 }

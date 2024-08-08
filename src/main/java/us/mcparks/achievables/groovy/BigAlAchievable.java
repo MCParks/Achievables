@@ -14,6 +14,7 @@ import us.mcparks.achievables.framework.Achievable;
 import us.mcparks.achievables.framework.AchievablePlayer;
 import us.mcparks.achievables.triggers.AchievableTrigger;
 import us.mcparks.achievables.triggers.EventAchievableTrigger;
+import us.mcparks.achievables.utils.AchievableGsonManager;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
@@ -28,7 +29,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable {
     UUID uuid;
 
     public BigAlAchievable(UUID uuid, Map<String, Object> initialState, Closure<Boolean> isSatisfied, Closure<Boolean> isDisqualified, EventClosureScript... eventScripts) {
-        this.serializedInitialState = Achievable.gson.toJson(initialState);
+        this.serializedInitialState = AchievableGsonManager.getGson().toJson(initialState);
         this.satisfiedScript = isSatisfied;
         this.disqualifiedScript = isDisqualified;
         this.uuid = uuid;
@@ -96,7 +97,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable {
 
     @Override
     public Map<String, Object> getInitialState() {
-        return Achievable.gson.fromJson(serializedInitialState, new TypeToken<Map<String, Object>>() {
+        return AchievableGsonManager.getGson().fromJson(serializedInitialState, new TypeToken<Map<String, Object>>() {
         }.getType());
     }
 

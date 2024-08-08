@@ -12,6 +12,7 @@ import us.mcparks.achievables.events.PlayerEvent;
 import us.mcparks.achievables.framework.AbstractStatefulAchievable;
 import us.mcparks.achievables.framework.Achievable;
 import us.mcparks.achievables.framework.AchievablePlayer;
+import us.mcparks.achievables.utils.AchievableGsonManager;
 import us.mcparks.achievables.utils.GroovyEvaluator;
 import us.mcparks.achievables.triggers.AchievableTrigger;
 import us.mcparks.achievables.triggers.EventAchievableTrigger;
@@ -38,7 +39,7 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
     public SimpleStateAchievable(UUID uuid, Map<String, Object> initialState, String isSatisfied, String isDisqualified, EventScript... eventScripts) {
         this.uuid = uuid;
         this.eventHandlers = HashMultimap.create();
-        serializedInitialState = Achievable.gson.toJson(initialState);
+        serializedInitialState = AchievableGsonManager.getGson().toJson(initialState);
         this.isSatisfiedScript = isSatisfied;
         this.isDisqualifiedScript = isDisqualified;
 
@@ -53,7 +54,7 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
     }
 
     private SimpleStateAchievable(Map<String, Object> initialState, String isSatisfiedScript, String isDisqualifiedScript, Multimap<AchievableTrigger.Type, String> eventHandlers, UUID uuid) {
-        serializedInitialState = Achievable.gson.toJson(initialState);
+        serializedInitialState = AchievableGsonManager.getGson().toJson(initialState);
         this.isSatisfiedScript = isSatisfiedScript;
         this.isDisqualifiedScript = isDisqualifiedScript;
         this.eventHandlers = eventHandlers;
@@ -121,7 +122,7 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
     }
 
     public static SimpleStateAchievable fromJson(String json) {
-        return Achievable.gson.fromJson(json, SimpleStateAchievable.class);
+        return AchievableGsonManager.getGson().fromJson(json, SimpleStateAchievable.class);
     }
 
     private Object runScriptForPlayer(AchievablePlayer player, String script) {
@@ -152,7 +153,7 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
 
     @Override
     public Map<String, Object> getInitialState() {
-        return Achievable.gson.fromJson(serializedInitialState, new TypeToken<Map<String, Object>>() {
+        return AchievableGsonManager.getGson().fromJson(serializedInitialState, new TypeToken<Map<String, Object>>() {
         }.getType());
     }
 
