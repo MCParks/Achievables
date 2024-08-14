@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import us.mcparks.achievables.dsl.BigalsIntegratedGroovyAchievementLanguage;
 import us.mcparks.achievables.dsl.meta.MetaBuilder;
+import us.mcparks.achievables.groovy.BigAlAchievable;
 import us.mcparks.achievables.utils.AchievableGsonManager;
 
 import java.util.function.Consumer;
@@ -30,6 +31,10 @@ public class Achievables {
 
     public void setAchievableMetaBuilderSupplier(Supplier<MetaBuilder<?>> builder) {
         BigalsIntegratedGroovyAchievementLanguage.setMetaBuilderSupplier(builder);
+    }
+
+    public void setAchievableBackfillDataSupplier(Supplier<Object> handler) {
+        BigAlAchievable.setBackfillDataSupplier(handler);
     }
 
     public static void initialize(AchievableManager achievableManager) {

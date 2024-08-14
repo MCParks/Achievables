@@ -6,29 +6,38 @@ import com.google.gson.reflect.TypeToken;
 import groovy.lang.Closure;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import us.mcparks.achievables.Achievables;
 import us.mcparks.achievables.events.Event;
 import us.mcparks.achievables.events.PlayerEvent;
 import us.mcparks.achievables.framework.AbstractStatefulAchievable;
 import us.mcparks.achievables.framework.Achievable;
 import us.mcparks.achievables.framework.AchievablePlayer;
+import us.mcparks.achievables.framework.BackfillableAchievable;
 import us.mcparks.achievables.triggers.AchievableTrigger;
 import us.mcparks.achievables.triggers.EventAchievableTrigger;
 import us.mcparks.achievables.utils.AchievableGsonManager;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Supplier;
 
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
-public class BigAlAchievable extends AbstractStatefulAchievable {
+public class BigAlAchievable extends AbstractStatefulAchievable implements BackfillableAchievable {
     String serializedInitialState;
     Closure<Boolean> satisfiedScript;
     Closure<Boolean> disqualifiedScript;
     Multimap<AchievableTrigger.Type, Closure> eventHandlers;
+
+    @Setter static Supplier<Object> backfillDataSupplier = null;
+
+    // optional script that can look up offline info to backfill state
+    Closure backfillScript;
+
     @EqualsAndHashCode.Include
     UUID uuid;
 
-    public BigAlAchievable(UUID uuid, Map<String, Object> initialState, Closure<Boolean> isSatisfied, Closure<Boolean> isDisqualified, EventClosureScript... eventScripts) {
+    public BigAlAchievable(UUID uuid, Map<String, Object> initialState, Closure<Boolean> isSatisfied, Closure<Boolean> isDisqualified, Closure backfillScript, EventClosureScript... eventScripts) {
         this.serializedInitialState = AchievableGsonManager.getGson().toJson(initialState);
         this.satisfiedScript = isSatisfied;
         this.disqualifiedScript = isDisqualified;
@@ -91,6 +100,23 @@ public class BigAlAchievable extends AbstractStatefulAchievable {
     }
 
     @Override
+    public void processBackfill(AchievablePlayer player) {
+        if (backfillScript != null) {
+            BackfillScriptThisObject obj = BackfillScriptThisObject.of(player, getPlayerState(player), uuid, backfillDataSupplier.get());
+            backfillScript.rehydrate(null, obj, obj).call();
+            try {
+                Achievables.getInstance().getAchievableManager().setPlayerState(player, this, obj.state);
+
+                if (isSatisfied(player)) {
+                    Achievables.getInstance().getAchievableManager().completeAchievable(this, player);
+                }
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
     public UUID getUUID() {
         return uuid;
     }
@@ -129,12 +155,22 @@ public class BigAlAchievable extends AbstractStatefulAchievable {
         final Event event;
     }
 
+    @RequiredArgsConstructor(staticName = "of")
+    static class BackfillScriptThisObject {
+        final AchievablePlayer player;
+        final Map<String, Object> state;
+        final UUID achievableUUID;
+        final Object backfillData;
+    }
+
     public static class Builder {
         Map<String, Object> initialState = new HashMap<>();
         List<Closure<Boolean>> isSatisfied = new ArrayList<>();
         List<Closure<Boolean>> isDisqualified = new ArrayList<>();
         List<EventClosureScript> eventScripts = new ArrayList<>();
         UUID uuid;
+
+        Closure backfillScript = null;
 
         public Builder withInitialState(Map<String, Object> initialState) {
             this.initialState = initialState;
@@ -146,6 +182,11 @@ public class BigAlAchievable extends AbstractStatefulAchievable {
                 this.initialState = new HashMap<>();
             }
             initialState.put(key, initialValue);
+            return this;
+        }
+
+        public Builder setBackfillScript(Closure backfillScript) {
+            this.backfillScript = backfillScript;
             return this;
         }
 
@@ -187,6 +228,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable {
             return new BigAlAchievable(uuid, initialState,
                     andClosures(isSatisfied),
                     isDisqualified.isEmpty() ? null : orClosures(isDisqualified),
+                    backfillScript,
                     eventScripts.toArray(new EventClosureScript[0]));
         }
 
