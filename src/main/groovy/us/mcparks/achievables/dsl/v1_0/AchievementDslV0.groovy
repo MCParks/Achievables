@@ -32,11 +32,18 @@ public class AchievementDslV0 {
 
     @CompileDynamic
     def methodMissing(String name, args) {
-        if (args instanceof Object[] && args.length == 1 && metaBuilder.hasProperty(name)) {
+        try {
             metaBuilder."$name"(args[0])
-        } else {
-            throw new MissingMethodException(name, this.class, args)
+        } catch (Exception ex) {
+            System.out.println("metabuilder does not have property: " + name)
         }
+//        if (args instanceof Object[] && args.length == 1 && (metaBuilder.hasProperty(name) || metaBuilder.metaClass.hasMethod(name, args[0].class))) {
+//            System.out.println("metabuilder has property: " + name)
+//            metaBuilder."$name"(args[0])
+//        } else {
+//            System.out.println("Properties of metabuilder: " + metaBuilder.metaClass.methods*.name)
+//            throw new MissingMethodException(name, this.class, args)
+//        }
     }
 
     @CompileDynamic
@@ -47,34 +54,6 @@ public class AchievementDslV0 {
             throw new MissingPropertyException(name, this.class)
         }
     }
-
-//    def name(String name) {
-//        metaBuilder.name(name)
-//    }
-//
-//    def description(String description) {
-//        metaBuilder.description(description)
-//    }
-//
-//    def icon(String icon) {
-//        metaBuilder.icon(icon)
-//    }
-//
-//    def reward(String reward) {
-//        metaBuilder.reward(AttractionReward.parseSingleReward(reward))
-//    }
-//
-//    def announceProgress(boolean announceProgress) {
-//        metaBuilder.announceProgress(announceProgress)
-//    }
-//
-//    def active(boolean active) {
-//        metaBuilder.active(active)
-//    }
-//
-//    def onComplete(String onComplete) {
-//        metaBuilder.onCompleteScript(onComplete)
-//    }
 
     // parse as map
     def state(Closure closure) {

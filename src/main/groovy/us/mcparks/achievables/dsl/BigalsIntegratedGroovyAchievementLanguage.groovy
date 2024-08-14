@@ -121,7 +121,7 @@ public final class BigalsIntegratedGroovyAchievementLanguage {
         // Tell the GroovyShell about the VersionDsl
         int version = versionEvaluator.evaluateExpression(achievementCodeAsString)
         if (version == 0) {
-            System.out.println("Using version 0")
+            //System.out.println("Using version 0")
             AchievableWithMeta achievement = bigalEvaluator.evaluateExpression(achievementCodeAsString)
             if (uuid != null) {
                 // convert to builder and back to add the uuid
