@@ -46,6 +46,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
         for (EventClosureScript handler : eventScripts) {
             this.eventHandlers.put(new AchievableTrigger.Type(handler.eventClass.getCanonicalName()), handler.closure);
         }
+        this.backfillScript = backfillScript;
     }
 
     @Override
@@ -134,6 +135,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
                 .withInitialState(getInitialState())
                 .addSatisfiedScript(satisfiedScript)
                 .addDisqualifiedScript(disqualifiedScript)
+                .setBackfillScript(backfillScript)
                 .addEventHandlers(eventHandlers.entries().stream().map(entry -> {
                     try {
                         return EventClosureScript.of((Class<? extends Event>) Class.forName(entry.getKey().toString()), entry.getValue());

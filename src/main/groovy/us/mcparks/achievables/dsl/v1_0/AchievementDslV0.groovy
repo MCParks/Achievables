@@ -78,6 +78,10 @@ public class AchievementDslV0 {
         closure()
     }
 
+    def backfill(Closure closure) {
+        achievableBuilder.setBackfillScript(closure.dehydrate())
+    }
+
     AchievableWithMeta buildAchievement() {
         new AchievableWithMeta(achievableBuilder.build(), metaBuilder.build())
     }
