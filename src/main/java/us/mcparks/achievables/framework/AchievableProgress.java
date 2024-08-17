@@ -9,4 +9,6 @@ public class AchievableProgress {
     int currentProgress;
     @Getter
     int completionProgress;
+    @Getter
+    String progressString;
 }
