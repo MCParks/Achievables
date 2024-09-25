@@ -26,6 +26,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
     Closure<Boolean> satisfiedScript;
     Closure<Boolean> disqualifiedScript;
     Multimap<AchievableTrigger.Type, Closure> eventHandlers;
+    Multimap<AchievableTrigger.Type, Closure> staticEventHandlers;
 
     @Setter static Supplier<Object> backfillDataSupplier = null;
 
@@ -41,28 +42,60 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
         this.disqualifiedScript = isDisqualified;
         this.uuid = uuid;
         this.eventHandlers = HashMultimap.create();
+        this.staticEventHandlers = HashMultimap.create();
         for (EventClosureScript handler : eventScripts) {
-            this.eventHandlers.put(new AchievableTrigger.Type(handler.eventClass.getCanonicalName()), handler.closure);
+            if (handler.isStatic) {
+                System.out.println("We have a static event handler for " + handler.eventClass.getCanonicalName());
+                this.staticEventHandlers.put(new AchievableTrigger.Type(handler.eventClass.getCanonicalName()), handler.closure);
+            } else {
+                this.eventHandlers.put(new AchievableTrigger.Type(handler.eventClass.getCanonicalName()), handler.closure);
+            }
         }
         this.backfillScript = backfillScript;
     }
 
     @Override
     public Collection<AchievableTrigger.Type> getTriggers() {
-        return eventHandlers.keySet();
+        Set<AchievableTrigger.Type> triggers = new HashSet<>();
+        triggers.addAll(staticEventHandlers.keySet());
+        triggers.addAll(eventHandlers.keySet());
+        return triggers;
     }
 
     @Override
     public boolean isSatisfied(AchievablePlayer player) {
-        ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), null);
+        ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), getStaticState(), null);
         return satisfiedScript.rehydrate(null, obj, obj).call();
     }
 
     public boolean isDisqualified(AchievablePlayer player) {
         if (disqualifiedScript == null) return false;
 
-        ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), null);
+        ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), getStaticState(), null);
         return disqualifiedScript.rehydrate(null, obj, obj).call();
+    }
+
+    @Override
+    public void process(AchievableTrigger trigger) {
+        // First, check if this achievable is listening to the event statically
+        if (staticEventHandlers.containsKey(trigger.getType())) {
+            staticEventHandlers.get(trigger.getType()).forEach(
+                    script -> {
+                        ScriptThisObject obj = ScriptThisObject.of(null, null, getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
+                        script.rehydrate(null, obj, obj).call();
+                        try {
+                            Achievables.getInstance().getAchievableManager().setStaticState(this, obj.shared);
+                        } catch (ExecutionException e) {
+                            e.printStackTrace();
+                        }
+                    });
+        }
+
+        // Then, use the default process method to handle it for each player if it also appears in the non-static event handlers
+        if (eventHandlers.containsKey(trigger.getType())) {
+            super.process(trigger);
+        }
+
     }
 
     @Override
@@ -76,7 +109,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
             if (eventHandlers.containsKey(trigger.getType())) {
                 eventHandlers.get(trigger.getType()).forEach(
                         script -> {
-                            ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), ((EventAchievableTrigger) trigger).getEvent());
+                            ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
                             script.rehydrate(null, obj, obj).call();
                             try {
                                 Achievables.getInstance().getAchievableManager().setPlayerState(player, this, obj.state);
@@ -124,12 +157,21 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
         return BigAlAchievable.builder()
                 .uuid(uuid)
                 .withInitialState(getInitialPlayerState())
+                .withInitialStaticState(getInitialStaticState())
                 .addSatisfiedScript(satisfiedScript)
                 .addDisqualifiedScript(disqualifiedScript)
                 .setBackfillScript(backfillScript)
                 .addEventHandlers(eventHandlers.entries().stream().map(entry -> {
                     try {
-                        return EventClosureScript.of((Class<? extends Event>) Class.forName(entry.getKey().toString()), entry.getValue());
+                        return EventClosureScript.of((Class<? extends Event>) Class.forName(entry.getKey().toString()), entry.getValue(), false);
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                }).toArray(EventClosureScript[]::new))
+                .addEventHandlers(staticEventHandlers.entries().stream().map(entry -> {
+                    try {
+                        return EventClosureScript.of((Class<? extends Event>) Class.forName(entry.getKey().toString()), entry.getValue(), true);
                     } catch (ClassNotFoundException e) {
                         e.printStackTrace();
                         return null;
@@ -145,6 +187,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
     static class ScriptThisObject {
         final AchievablePlayer player;
         final Map<String, Object> state;
+        final Map<String, Object> shared;
         final Event event;
     }
 

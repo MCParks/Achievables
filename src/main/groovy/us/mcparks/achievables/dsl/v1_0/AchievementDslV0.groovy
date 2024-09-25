@@ -15,6 +15,7 @@ import us.mcparks.achievables.groovy.EventClosureScript
 public class AchievementDslV0 {
     final static int SYNTAX_VERSION = 0
     def initialState = [:]
+    def initialStaticState = [:]
     MetaBuilder<?> metaBuilder = BigalsIntegratedGroovyAchievementLanguage.metaBuilderSupplier.get();
     BigAlAchievable.Builder achievableBuilder = BigAlAchievable.builder()
 
@@ -63,6 +64,13 @@ public class AchievementDslV0 {
         achievableBuilder.withInitialState(initialState as Map<String, Object>)
     }
 
+    def shared(Closure closure) {
+        closure.resolveStrategy = Closure.DELEGATE_FIRST
+        closure.delegate = initialStaticState
+        closure()
+        achievableBuilder.withInitialStaticState(initialStaticState as Map<String, Object>)
+    }
+
     def activators(Closure<Boolean> closure) {
         achievableBuilder.addSatisfiedScript(closure.dehydrate())
     }
@@ -87,8 +95,17 @@ public class AchievementDslV0 {
     }
 
     class EventsDsl {
+
         void on(final String eventName, final Closure closure) {
-            achievableBuilder.addEventHandler(EventClosureScript.of(Achievables.getInstance().getAchievableManager().getEventClass(eventName) as Class<? extends Event>, closure.dehydrate()))
+            on(Collections.emptyMap(), eventName, closure)
+        }
+
+        void on(Map<String,Boolean> optionalFlags, final String eventName, final Closure closure) {
+            boolean shared = optionalFlags.get("shared") ?: false
+            if (shared) {
+                System.out.println("Shared event: ${eventName}")
+            }
+            achievableBuilder.addEventHandler(EventClosureScript.of(Achievables.getInstance().getAchievableManager().getEventClass(eventName) as Class<? extends Event>, closure.dehydrate(), shared))
         }
     }
 
