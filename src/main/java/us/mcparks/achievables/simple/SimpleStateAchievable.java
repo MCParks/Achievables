@@ -10,7 +10,6 @@ import org.intellij.lang.annotations.Language;
 import us.mcparks.achievables.Achievables;
 import us.mcparks.achievables.events.PlayerEvent;
 import us.mcparks.achievables.framework.AbstractStatefulAchievable;
-import us.mcparks.achievables.framework.Achievable;
 import us.mcparks.achievables.framework.AchievablePlayer;
 import us.mcparks.achievables.utils.AchievableGsonManager;
 import us.mcparks.achievables.utils.GroovyEvaluator;
@@ -21,7 +20,6 @@ import java.util.concurrent.ExecutionException;
 
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class SimpleStateAchievable extends AbstractStatefulAchievable {
-    String serializedInitialState;
     @Language("groovy")
     String isSatisfiedScript;
     @Language("groovy")
@@ -32,14 +30,14 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
     UUID uuid;
 
     @SafeVarargs
-    public SimpleStateAchievable(Map<String, Object> initialState, String isSatisfied, String isDisqualified, EventScript... eventScripts) {
-        this(UUID.randomUUID(), initialState, isSatisfied, isDisqualified, eventScripts);
+    public SimpleStateAchievable(Map<String, Object> initialState, Map<String, Object> initialStaticState, String isSatisfied, String isDisqualified, EventScript... eventScripts) {
+        this(UUID.randomUUID(), initialState, initialStaticState, isSatisfied, isDisqualified, eventScripts);
     }
 
-    public SimpleStateAchievable(UUID uuid, Map<String, Object> initialState, String isSatisfied, String isDisqualified, EventScript... eventScripts) {
+    public SimpleStateAchievable(UUID uuid, Map<String, Object> initialState, Map<String, Object> initialStaticState, String isSatisfied, String isDisqualified, EventScript... eventScripts) {
+        super(AchievableGsonManager.getGson().toJson(initialState), AchievableGsonManager.getGson().toJson(initialStaticState));
         this.uuid = uuid;
         this.eventHandlers = HashMultimap.create();
-        serializedInitialState = AchievableGsonManager.getGson().toJson(initialState);
         this.isSatisfiedScript = isSatisfied;
         this.isDisqualifiedScript = isDisqualified;
 
@@ -49,12 +47,12 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
     }
 
     @SafeVarargs
-    public SimpleStateAchievable(Map<String, Object> initialState, String isSatisfied, EventScript... eventScripts) {
-        this(initialState, isSatisfied, null, eventScripts);
+    public SimpleStateAchievable(Map<String, Object> initialState, Map<String, Object> initialStaticState, String isSatisfied, EventScript... eventScripts) {
+        this(initialState, initialStaticState, isSatisfied, null, eventScripts);
     }
 
-    private SimpleStateAchievable(Map<String, Object> initialState, String isSatisfiedScript, String isDisqualifiedScript, Multimap<AchievableTrigger.Type, String> eventHandlers, UUID uuid) {
-        serializedInitialState = AchievableGsonManager.getGson().toJson(initialState);
+    private SimpleStateAchievable(Map<String, Object> initialState, Map<String, Object> initialStaticState, String isSatisfiedScript, String isDisqualifiedScript, Multimap<AchievableTrigger.Type, String> eventHandlers, UUID uuid) {
+        super(AchievableGsonManager.getGson().toJson(initialState), AchievableGsonManager.getGson().toJson(initialStaticState));
         this.isSatisfiedScript = isSatisfiedScript;
         this.isDisqualifiedScript = isDisqualifiedScript;
         this.eventHandlers = eventHandlers;
@@ -62,6 +60,7 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
     }
 
     public SimpleStateAchievable() {
+        super("{}", "{}");
         evaluator = new GroovyEvaluator();
     }
 
@@ -106,7 +105,7 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
 
                 if (isDisqualified(player)) {
                     try {
-                        Achievables.getInstance().getAchievableManager().setPlayerState(player, this, getInitialState());
+                        Achievables.getInstance().getAchievableManager().setPlayerState(player, this, getInitialPlayerState());
                     } catch (ExecutionException e) {
                         e.printStackTrace();
                         Achievables.getInstance().getLogger().warning("Failed to reset player state for achievable");
@@ -151,12 +150,6 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
 
     }
 
-    @Override
-    public Map<String, Object> getInitialState() {
-        return AchievableGsonManager.getGson().fromJson(serializedInitialState, new TypeToken<Map<String, Object>>() {
-        }.getType());
-    }
-
     static class ScriptHolder {
         ScriptHolder(String script) {
 
@@ -175,6 +168,7 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
 
     public static class Builder<T extends Builder<T>> {
         Map<String, Object> initialState = null;
+        Map<String, Object> initialStaticState = new HashMap<>();
         List<String> isSatisfiedScripts = new ArrayList<>();
         List<String> isDisqualifiedScripts = new ArrayList<>();
         List<EventScript> eventScripts = new ArrayList<>();
@@ -195,11 +189,27 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
             return self();
         }
 
+        public T withInitialStaticState(Map<String, Object> initialStaticState) {
+            if (this.initialStaticState != null) {
+                throw new UnsupportedOperationException("Initial static state already set");
+            }
+            this.initialStaticState = initialStaticState;
+            return self();
+        }
+
         public T addState(String key, Object initialValue) {
             if (this.initialState == null) {
                 this.initialState = new HashMap<>();
             }
             this.initialState.put(key, initialValue);
+            return self();
+        }
+
+        public T addStaticState(String key, Object initialValue) {
+            if (this.initialStaticState == null) {
+                this.initialStaticState = new HashMap<>();
+            }
+            this.initialStaticState.put(key, initialValue);
             return self();
         }
 
@@ -220,7 +230,7 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
         public SimpleStateAchievable build() {
             String isSatisfiedScript = String.join("() && ", isSatisfiedScripts);
             String isDisqualifiedScript = isDisqualifiedScripts.isEmpty() ? null : String.join("() || ", isDisqualifiedScripts);
-            return new SimpleStateAchievable(initialState, isSatisfiedScript, isDisqualifiedScript, eventScripts.toArray(new EventScript[0]));
+            return new SimpleStateAchievable(initialState, initialStaticState, isSatisfiedScript, isDisqualifiedScript, eventScripts.toArray(new EventScript[0]));
         }
     }
 }

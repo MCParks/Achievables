@@ -7,7 +7,23 @@ import java.util.concurrent.ExecutionException;
 
 public interface StatefulAchievable extends Achievable {
 
-    Map<String, Object> getInitialState();
+    Map<String, Object> getInitialPlayerState();
+
+    Map<String, Object> getInitialStaticState();
+
+    default Map<String, Object> getStaticState() {
+        Map<String, Object> state = Achievables.getInstance().getAchievableManager().getStaticState(this);
+        try {
+            if (state == null) {
+                Achievables.getInstance().getAchievableManager().initializeStaticState(this);
+            }
+
+        } catch (ExecutionException e) {
+            Achievables.getInstance().getLogger().warning("Failed to set static state for achievable");
+            e.printStackTrace();
+        }
+        return state == null ? getInitialStaticState() : state;
+    }
 
     default Map<String, Object> getPlayerState(AchievablePlayer player) {
         Map<String, Object> state = Achievables.getInstance().getAchievableManager().getPlayerState(player, this);
@@ -21,6 +37,6 @@ public interface StatefulAchievable extends Achievable {
             e.printStackTrace();
         }
 
-        return state == null ? getInitialState() : state;
+        return state == null ? getInitialPlayerState() : state;
     }
 }

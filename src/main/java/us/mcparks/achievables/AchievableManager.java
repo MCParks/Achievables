@@ -23,7 +23,13 @@ public interface AchievableManager {
 
     void setPlayerState(AchievablePlayer player, StatefulAchievable achievable, Map<String,Object> state) throws ExecutionException;
 
+    Map<String, Object> getStaticState(StatefulAchievable achievable);
+
+    void setStaticState(StatefulAchievable achievable, Map<String, Object> state) throws ExecutionException;
+
     void initializePlayerState(AchievablePlayer player, StatefulAchievable achievable) throws ExecutionException;
+
+    void initializeStaticState(StatefulAchievable achievable) throws ExecutionException;
 
     Class<? extends Event> getEventClass(String eventClassName);
 
