@@ -210,12 +210,14 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
         private final Map<K, V> defaultValues;
 
         public DefaultingMap(Map<K, V> defaultValues) {
-            this.defaultValues = defaultValues;
+            this.defaultValues = defaultValues == null ? new HashMap<>() : defaultValues;
         }
 
         public DefaultingMap(Map<K, V> defaultValues, Map<K, V> initialValues) {
-            this.defaultValues = defaultValues;
-            this.putAll(initialValues);
+            this.defaultValues = defaultValues == null ? new HashMap<>() : defaultValues;
+            if (initialValues != null) {
+                this.putAll(initialValues);
+            }
         }
 
         @Override
