@@ -65,14 +65,14 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
 
     @Override
     public boolean isSatisfied(AchievablePlayer player) {
-        ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), getStaticState(), null);
+        ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), getStaticState(), null, getInitialPlayerState(), getInitialStaticState());
         return satisfiedScript.rehydrate(null, obj, obj).call();
     }
 
     public boolean isDisqualified(AchievablePlayer player) {
         if (disqualifiedScript == null) return false;
 
-        ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), getStaticState(), null);
+        ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), getStaticState(), null, getInitialPlayerState(), getInitialStaticState());
         return disqualifiedScript.rehydrate(null, obj, obj).call();
     }
 
@@ -83,7 +83,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
             try {
                 staticEventHandlers.get(trigger.getType()).forEach(
                         script -> {
-                            ScriptThisObject obj = ScriptThisObject.of(null, null, getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
+                            ScriptThisObject obj = ScriptThisObject.of(null, null, getStaticState(), ((EventAchievableTrigger) trigger).getEvent(), null, getInitialStaticState());
                             script.rehydrate(null, obj, obj).call();
                             try {
                                 Achievables.getInstance().getAchievableManager().setStaticState(this, obj.shared);
@@ -115,7 +115,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
             if (eventHandlers.containsKey(trigger.getType())) {
                 eventHandlers.get(trigger.getType()).forEach(
                         script -> {
-                            ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
+                            ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), getStaticState(), ((EventAchievableTrigger) trigger).getEvent(), getInitialPlayerState(), getInitialStaticState());
                             script.rehydrate(null, obj, obj).call();
                             try {
                                 Achievables.getInstance().getAchievableManager().setPlayerState(player, this, obj.state);
@@ -197,9 +197,31 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
     @RequiredArgsConstructor(staticName = "of")
     static class ScriptThisObject {
         final AchievablePlayer player;
-        final Map<String, Object> state;
-        final Map<String, Object> shared;
+        final DefaultingMap<String, Object> state;
+        final DefaultingMap<String, Object> shared;
         final Event event;
+
+        static ScriptThisObject of(AchievablePlayer player, Map<String, Object> state, Map<String, Object> shared, Event event, Map<String,Object> initialPlayerState, Map<String, Object> initialStaticState) {
+            return new ScriptThisObject(player, new DefaultingMap<>(initialPlayerState, state), new DefaultingMap<>(initialStaticState, shared), event);
+        }
+    }
+
+    static class DefaultingMap<K, V> extends HashMap<K, V> {
+        private final Map<K, V> defaultValues;
+
+        public DefaultingMap(Map<K, V> defaultValues) {
+            this.defaultValues = defaultValues;
+        }
+
+        public DefaultingMap(Map<K, V> defaultValues, Map<K, V> initialValues) {
+            this.defaultValues = defaultValues;
+            this.putAll(initialValues);
+        }
+
+        @Override
+        public V get(Object key) {
+            return super.getOrDefault(key, defaultValues.get(key));
+        }
     }
 
     @RequiredArgsConstructor(staticName = "of")

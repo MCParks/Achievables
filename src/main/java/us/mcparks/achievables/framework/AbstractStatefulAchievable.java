@@ -9,18 +9,29 @@ public abstract class AbstractStatefulAchievable extends AbstractAchievable impl
     final String serializedInitialPlayerState;
     final String serializedInitialStaticState;
 
+    Map<String, Object> cachedInitialPlayerState = null;
+    Map<String, Object> cachedInitialStaticState = null;
+
     protected AbstractStatefulAchievable(String serializedInitialPlayerState, String serializedInitialStaticState) {
         this.serializedInitialPlayerState = serializedInitialPlayerState;
         this.serializedInitialStaticState = serializedInitialStaticState;
     }
 
     public Map<String, Object> getInitialPlayerState() {
-        return AchievableGsonManager.getGson().fromJson(serializedInitialPlayerState, new TypeToken<Map<String, Object>>() {
-        }.getType());
+        if (cachedInitialPlayerState == null) {
+            return cachedInitialPlayerState = AchievableGsonManager.getGson().fromJson(serializedInitialPlayerState, new TypeToken<Map<String, Object>>() {
+            }.getType());
+        } else {
+            return cachedInitialPlayerState;
+        }
     }
 
     public Map<String, Object> getInitialStaticState() {
-        return AchievableGsonManager.getGson().fromJson(serializedInitialStaticState, new TypeToken<Map<String, Object>>() {
-        }.getType());
+        if (cachedInitialStaticState == null) {
+            return cachedInitialStaticState = AchievableGsonManager.getGson().fromJson(serializedInitialStaticState, new TypeToken<Map<String, Object>>() {
+            }.getType());
+        } else {
+            return cachedInitialStaticState;
+        }
     }
 }
