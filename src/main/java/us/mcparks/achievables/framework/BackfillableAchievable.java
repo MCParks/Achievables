@@ -8,4 +8,6 @@ import java.util.concurrent.ExecutionException;
 public interface BackfillableAchievable extends Achievable {
 
     void processBackfill(AchievablePlayer player);
+
+    boolean hasBackfill();
 }

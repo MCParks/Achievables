@@ -20,6 +20,7 @@ import us.mcparks.achievables.utils.AchievableGsonManager;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class BigAlAchievable extends AbstractStatefulAchievable implements BackfillableAchievable {
@@ -79,16 +80,21 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
     public void process(AchievableTrigger trigger) {
         // First, check if this achievable is listening to the event statically
         if (staticEventHandlers.containsKey(trigger.getType())) {
-            staticEventHandlers.get(trigger.getType()).forEach(
-                    script -> {
-                        ScriptThisObject obj = ScriptThisObject.of(null, null, getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
-                        script.rehydrate(null, obj, obj).call();
-                        try {
-                            Achievables.getInstance().getAchievableManager().setStaticState(this, obj.shared);
-                        } catch (ExecutionException e) {
-                            e.printStackTrace();
-                        }
-                    });
+            try {
+                staticEventHandlers.get(trigger.getType()).forEach(
+                        script -> {
+                            ScriptThisObject obj = ScriptThisObject.of(null, null, getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
+                            script.rehydrate(null, obj, obj).call();
+                            try {
+                                Achievables.getInstance().getAchievableManager().setStaticState(this, obj.shared);
+                            } catch (ExecutionException e) {
+                                e.printStackTrace();
+                            }
+                        });
+            } catch (Exception e) {
+                Achievables.getInstance().getLogger().log(Level.SEVERE, "Error processing static event handler for " + trigger.getType().toString() + " in achievable " + getUUID().toString(), e);
+            }
+
         }
 
         // Then, use the default process method to handle it for each player if it also appears in the non-static event handlers
@@ -146,6 +152,11 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
                 e.printStackTrace();
             }
         }
+    }
+
+    @Override
+    public boolean hasBackfill() {
+        return backfillScript != null;
     }
 
     @Override
