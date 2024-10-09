@@ -94,12 +94,31 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
             } catch (Exception e) {
                 Achievables.getInstance().getLogger().log(Level.SEVERE, "Error processing static event handler for " + trigger.getType().toString() + " in achievable " + getUUID().toString(), e);
             }
-
         }
 
         // Then, use the default process method to handle it for each player if it also appears in the non-static event handlers
         if (eventHandlers.containsKey(trigger.getType())) {
             super.process(trigger);
+        }
+
+
+        // Now that we've processed the event for all players, see if that had an effect on players' completion
+        // (the reason why we do this again is that static state may have been updated by the individual event responders)
+        for (AchievablePlayer player : getApplicablePlayers()) {
+            if (!Achievables.getInstance().getAchievableManager().isCompleted(this, player)) {
+                if (isDisqualified(player)) {
+                    try {
+                        Achievables.getInstance().getAchievableManager().setPlayerState(player, this, getInitialPlayerState());
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                        Achievables.getInstance().getLogger().warning("Failed to reset player state for achievable");
+                    }
+                }
+
+                if (isSatisfied(player)) {
+                    Achievables.getInstance().getAchievableManager().completeAchievable(this, player);
+                }
+            }
         }
 
     }
@@ -119,6 +138,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
                             script.rehydrate(null, obj, obj).call();
                             try {
                                 Achievables.getInstance().getAchievableManager().setPlayerState(player, this, obj.state);
+                                Achievables.getInstance().getAchievableManager().setStaticState(this, obj.shared);
                             } catch (ExecutionException e) {
                                 e.printStackTrace();
                             }

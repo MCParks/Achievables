@@ -44,6 +44,9 @@ public interface Achievable {
                 if (isSatisfied(player)) {
                     Achievables.getInstance().getAchievableManager().completeAchievable(this, player);
                 }
+            } else {
+                // even if it's satisfied, we still need to process the trigger just in case there is static state
+                process(player, trigger);
             }
 
         }
