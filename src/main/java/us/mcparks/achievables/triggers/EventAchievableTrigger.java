@@ -21,5 +21,9 @@ public class EventAchievableTrigger implements AchievableTrigger {
     public Type getType() {
         return new Type(eventClass.getCanonicalName());
     }
-    
+
+    @Override
+    public String toString() {
+        return eventClass.getCanonicalName();
+    }
 }

@@ -92,7 +92,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
                             }
                         });
             } catch (Exception e) {
-                Achievables.getInstance().getLogger().log(Level.SEVERE, "Error processing static event handler for " + trigger.getType().toString() + " in achievable " + getUUID().toString(), e);
+                Achievables.getInstance().getLogger().log(Level.SEVERE, "Error processing static event handler for " + trigger + " in achievable " + getUUID().toString(), e);
             }
         }
 
@@ -105,20 +105,25 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
         // Now that we've processed the event for all players, see if that had an effect on players' completion
         // (the reason why we do this again is that static state may have been updated by the individual event responders)
         for (AchievablePlayer player : getApplicablePlayers()) {
-            if (!Achievables.getInstance().getAchievableManager().isCompleted(this, player)) {
-                if (isDisqualified(player)) {
-                    try {
-                        Achievables.getInstance().getAchievableManager().setPlayerState(player, this, getInitialPlayerState());
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                        Achievables.getInstance().getLogger().warning("Failed to reset player state for achievable");
+            try {
+                if (!Achievables.getInstance().getAchievableManager().isCompleted(this, player)) {
+                    if (isDisqualified(player)) {
+                        try {
+                            Achievables.getInstance().getAchievableManager().setPlayerState(player, this, getInitialPlayerState());
+                        } catch (ExecutionException e) {
+                            e.printStackTrace();
+                            Achievables.getInstance().getLogger().warning("Failed to reset player state for achievable");
+                        }
+                    }
+
+                    if (isSatisfied(player)) {
+                        Achievables.getInstance().getAchievableManager().completeAchievable(this, player);
                     }
                 }
-
-                if (isSatisfied(player)) {
-                    Achievables.getInstance().getAchievableManager().completeAchievable(this, player);
-                }
+            } catch (Exception ex) {
+                Achievables.getInstance().getLogger().log(Level.SEVERE, "Error processing trigger " + trigger + " for player " + player + "in achievable " + getUUID().toString(), ex);
             }
+
         }
 
     }

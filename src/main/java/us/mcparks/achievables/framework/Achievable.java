@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.logging.Level;
 
 
 public interface Achievable {
@@ -31,24 +32,27 @@ public interface Achievable {
     // Processes the given trigger for all players
     default void process(AchievableTrigger trigger) {
         for (AchievablePlayer player : getApplicablePlayers()) {
-            // if this trigger is player specific and not for this player, skip this player
-            if (((EventAchievableTrigger) trigger).getEvent() instanceof PlayerEvent &&
-                    !((PlayerEvent) ((EventAchievableTrigger) trigger).getEvent()).getApplicablePlayer().equals(player)) {
-                continue;
-            }
-            // if not satisfied, process this trigger for the player
-            if (!Achievables.getInstance().getAchievableManager().isCompleted(this, player)) {
-                process(player, trigger);
-
-                // if that made us satisfy the achievement, complete it for the player
-                if (isSatisfied(player)) {
-                    Achievables.getInstance().getAchievableManager().completeAchievable(this, player);
+            try {
+                // if this trigger is player specific and not for this player, skip this player
+                if (((EventAchievableTrigger) trigger).getEvent() instanceof PlayerEvent &&
+                        !((PlayerEvent) ((EventAchievableTrigger) trigger).getEvent()).getApplicablePlayer().equals(player)) {
+                    continue;
                 }
-            } else {
-                // even if it's satisfied, we still need to process the trigger just in case there is static state
-                process(player, trigger);
-            }
+                // if not satisfied, process this trigger for the player
+                if (!Achievables.getInstance().getAchievableManager().isCompleted(this, player)) {
+                    process(player, trigger);
 
+                    // if that made us satisfy the achievement, complete it for the player
+                    if (isSatisfied(player)) {
+                        Achievables.getInstance().getAchievableManager().completeAchievable(this, player);
+                    }
+                } else {
+                    // even if it's satisfied, we still need to process the trigger just in case there is static state
+                    process(player, trigger);
+                }
+            } catch (Exception ex) {
+                Achievables.getInstance().getLogger().log(Level.SEVERE, "Error processing trigger " + trigger + " for player " + player + "in achievable " + getUUID().toString(), ex);
+            }
         }
     }
 
