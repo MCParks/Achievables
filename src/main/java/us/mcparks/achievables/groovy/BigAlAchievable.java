@@ -2,8 +2,8 @@ package us.mcparks.achievables.groovy;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.gson.reflect.TypeToken;
 import groovy.lang.Closure;
+import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -65,14 +65,14 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
 
     @Override
     public boolean isSatisfied(AchievablePlayer player) {
-        ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), getStaticState(), null, getInitialPlayerState(), getInitialStaticState());
+        ScriptThisObject obj = new ScriptThisObject(player, getPlayerState(player), getStaticState(), null);
         return satisfiedScript.rehydrate(null, obj, obj).call();
     }
 
     public boolean isDisqualified(AchievablePlayer player) {
         if (disqualifiedScript == null) return false;
 
-        ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), getStaticState(), null, getInitialPlayerState(), getInitialStaticState());
+        ScriptThisObject obj = new ScriptThisObject(player, getPlayerState(player), getStaticState(), null);
         return disqualifiedScript.rehydrate(null, obj, obj).call();
     }
 
@@ -83,7 +83,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
             try {
                 staticEventHandlers.get(trigger.getType()).forEach(
                         script -> {
-                            ScriptThisObject obj = ScriptThisObject.of(null, null, getStaticState(), ((EventAchievableTrigger) trigger).getEvent(), null, getInitialStaticState());
+                            ScriptThisObject obj = new ScriptThisObject(null, null, getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
                             script.rehydrate(null, obj, obj).call();
                             try {
                                 Achievables.getInstance().getAchievableManager().setStaticState(this, obj.shared);
@@ -139,7 +139,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
             if (eventHandlers.containsKey(trigger.getType())) {
                 eventHandlers.get(trigger.getType()).forEach(
                         script -> {
-                            ScriptThisObject obj = ScriptThisObject.of(player, getPlayerState(player), getStaticState(), ((EventAchievableTrigger) trigger).getEvent(), getInitialPlayerState(), getInitialStaticState());
+                            ScriptThisObject obj = new ScriptThisObject(player, getPlayerState(player), getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
                             script.rehydrate(null, obj, obj).call();
                             try {
                                 Achievables.getInstance().getAchievableManager().setPlayerState(player, this, obj.state);
@@ -219,35 +219,48 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
         return new BigAlAchievable.Builder();
     }
 
-    @RequiredArgsConstructor(staticName = "of")
-    static class ScriptThisObject {
+
+    @AllArgsConstructor
+    class ScriptThisObject {
         final AchievablePlayer player;
-        final DefaultingMap<String, Object> state;
-        final DefaultingMap<String, Object> shared;
+        final InitialStateBackedMap state;
+        final InitialStateBackedMap shared;
         final Event event;
 
-        static ScriptThisObject of(AchievablePlayer player, Map<String, Object> state, Map<String, Object> shared, Event event, Map<String,Object> initialPlayerState, Map<String, Object> initialStaticState) {
-            return new ScriptThisObject(player, new DefaultingMap<>(initialPlayerState, state), new DefaultingMap<>(initialStaticState, shared), event);
+        ScriptThisObject(AchievablePlayer player, Map<String,Object> state, Map<String,Object> shared, Event event) {
+            this(player, new InitialStateBackedMap(state, BigAlAchievable.this::getInitialPlayerState), new InitialStateBackedMap(shared, BigAlAchievable.this::getInitialStaticState), event);
         }
+
     }
 
-    static class DefaultingMap<K, V> extends HashMap<K, V> {
-        private final Map<K, V> defaultValues;
+    class InitialStateBackedMap extends HashMap<String, Object> {
+        Supplier<Map<String,Object>> getInitialState;
 
-        public DefaultingMap(Map<K, V> defaultValues) {
-            this.defaultValues = defaultValues == null ? new HashMap<>() : defaultValues;
-        }
-
-        public DefaultingMap(Map<K, V> defaultValues, Map<K, V> initialValues) {
-            this.defaultValues = defaultValues == null ? new HashMap<>() : defaultValues;
-            if (initialValues != null) {
-                this.putAll(initialValues);
+        public InitialStateBackedMap(Map<String, Object> currentState, Supplier<Map<String, Object>> initialState) {
+            if (currentState != null) {
+                putAll(currentState);
+            }
+            if (initialState != null) {
+                getInitialState = initialState;
             }
         }
 
         @Override
-        public V get(Object key) {
-            return super.getOrDefault(key, defaultValues.get(key));
+        public Object get(Object key) {
+            if (!containsKey(key)) {
+                if (getInitialState == null) {
+                    return null;
+                }
+                Object defaultValue = getInitialState.get().get(key);
+                if (defaultValue != null) {
+                    put((String)key, defaultValue);
+                    return defaultValue;
+                } else {
+                    return null;
+                }
+            } else {
+                return super.get(key);
+            }
         }
     }
 

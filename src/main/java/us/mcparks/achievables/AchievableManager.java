@@ -1,16 +1,20 @@
 package us.mcparks.achievables;
 
+import com.google.gson.reflect.TypeToken;
 import us.mcparks.achievables.events.Event;
 import us.mcparks.achievables.framework.Achievable;
 import us.mcparks.achievables.framework.AchievablePlayer;
 import us.mcparks.achievables.framework.StatefulAchievable;
 import us.mcparks.achievables.triggers.AchievableTrigger;
 
+import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 public interface AchievableManager {
+    Type achievableStateMapType = new TypeToken<Map<String,Object>>(){}.getType();
+
     void processTrigger(AchievableTrigger trigger);
 
     boolean isCompleted(Achievable achievable, AchievablePlayer player);
