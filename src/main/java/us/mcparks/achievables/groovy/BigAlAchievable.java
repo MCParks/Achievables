@@ -129,7 +129,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
     }
 
     @Override
-    public void process(AchievablePlayer player, AchievableTrigger trigger) {
+    public void process(AchievablePlayer player, AchievableTrigger trigger, boolean savePlayerState) {
         if (trigger instanceof EventAchievableTrigger) {
             if (((EventAchievableTrigger) trigger).getEvent() instanceof PlayerEvent &&
                     !((PlayerEvent) ((EventAchievableTrigger) trigger).getEvent()).getApplicablePlayer().equals(player)) {
@@ -142,7 +142,9 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
                             ScriptThisObject obj = new ScriptThisObject(player, getPlayerState(player), getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
                             script.rehydrate(null, obj, obj).call();
                             try {
-                                Achievables.getInstance().getAchievableManager().setPlayerState(player, this, obj.state);
+                                if (savePlayerState) {
+                                    Achievables.getInstance().getAchievableManager().setPlayerState(player, this, obj.state);
+                                }
                                 Achievables.getInstance().getAchievableManager().setStaticState(this, obj.shared);
                             } catch (ExecutionException e) {
                                 e.printStackTrace();

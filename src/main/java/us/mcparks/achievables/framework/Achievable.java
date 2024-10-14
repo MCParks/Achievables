@@ -27,7 +27,7 @@ public interface Achievable {
     boolean isSatisfied(AchievablePlayer player);
 
     // Processes the given trigger for the given player
-    void process(AchievablePlayer player, AchievableTrigger trigger);
+    void process(AchievablePlayer player, AchievableTrigger trigger, boolean savePlayerState);
 
     // Processes the given trigger for all players
     default void process(AchievableTrigger trigger) {
@@ -38,17 +38,17 @@ public interface Achievable {
                         !((PlayerEvent) ((EventAchievableTrigger) trigger).getEvent()).getApplicablePlayer().equals(player)) {
                     continue;
                 }
-                // if not satisfied, process this trigger for the player
+                // if not satisfied, process this trigger for the player and check if it's satisfied
                 if (!Achievables.getInstance().getAchievableManager().isCompleted(this, player)) {
-                    process(player, trigger);
+                    process(player, trigger, true);
 
                     // if that made us satisfy the achievement, complete it for the player
                     if (isSatisfied(player)) {
                         Achievables.getInstance().getAchievableManager().completeAchievable(this, player);
                     }
                 } else {
-                    // even if it's satisfied, we still need to process the trigger just in case there is static state
-                    process(player, trigger);
+                    // even if it's satisfied, we still need to process the trigger just in case there is static state -- we dont need to save the player state though!
+                    process(player, trigger, false);
                 }
             } catch (Exception ex) {
                 Achievables.getInstance().getLogger().log(Level.SEVERE, "Error processing trigger " + trigger + " for player " + player + "in achievable " + getUUID().toString(), ex);

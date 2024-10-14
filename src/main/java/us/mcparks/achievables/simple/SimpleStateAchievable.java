@@ -84,7 +84,7 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
     }
 
     @Override
-    public void process(AchievablePlayer player, AchievableTrigger trigger) {
+    public void process(AchievablePlayer player, AchievableTrigger trigger, boolean savePlayerState) {
         if (trigger instanceof EventAchievableTrigger) {
             if (((EventAchievableTrigger) trigger).getEvent() instanceof PlayerEvent &&
                     !((PlayerEvent) ((EventAchievableTrigger) trigger).getEvent()).getApplicablePlayer().equals(player)) {
@@ -95,10 +95,12 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
                 eventHandlers.get(trigger.getType()).forEach(
                         script -> {
                             runScriptForPlayer(player, script, Maps.of("event", ((EventAchievableTrigger) trigger).getEvent()));
-                            try {
-                                Achievables.getInstance().getAchievableManager().setPlayerState(player, this, (Map<String, Object>) evaluator.getVariable("state"));
-                            } catch (ExecutionException e) {
-                                e.printStackTrace();
+                            if (savePlayerState) {
+                                try {
+                                    Achievables.getInstance().getAchievableManager().setPlayerState(player, this, (Map<String, Object>) evaluator.getVariable("state"));
+                                } catch (ExecutionException e) {
+                                    e.printStackTrace();
+                                }
                             }
                         });
 
