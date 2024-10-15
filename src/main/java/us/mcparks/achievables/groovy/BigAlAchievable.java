@@ -142,9 +142,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
                             ScriptThisObject obj = new ScriptThisObject(player, getPlayerState(player), getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
                             script.rehydrate(null, obj, obj).call();
                             try {
-                                if (savePlayerState) {
-                                    Achievables.getInstance().getAchievableManager().setPlayerState(player, this, obj.state);
-                                }
+                                Achievables.getInstance().getAchievableManager().setPlayerState(player, this, obj.state, savePlayerState);
                                 Achievables.getInstance().getAchievableManager().setStaticState(this, obj.shared);
                             } catch (ExecutionException e) {
                                 e.printStackTrace();

@@ -95,12 +95,10 @@ public class SimpleStateAchievable extends AbstractStatefulAchievable {
                 eventHandlers.get(trigger.getType()).forEach(
                         script -> {
                             runScriptForPlayer(player, script, Maps.of("event", ((EventAchievableTrigger) trigger).getEvent()));
-                            if (savePlayerState) {
-                                try {
-                                    Achievables.getInstance().getAchievableManager().setPlayerState(player, this, (Map<String, Object>) evaluator.getVariable("state"));
-                                } catch (ExecutionException e) {
-                                    e.printStackTrace();
-                                }
+                            try {
+                                Achievables.getInstance().getAchievableManager().setPlayerState(player, this, (Map<String, Object>) evaluator.getVariable("state"), savePlayerState);
+                            } catch (ExecutionException e) {
+                                throw new RuntimeException(e);
                             }
                         });
 
