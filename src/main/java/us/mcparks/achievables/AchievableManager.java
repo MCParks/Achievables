@@ -25,7 +25,11 @@ public interface AchievableManager {
 
     Map<String,Object> getPlayerState(AchievablePlayer player, StatefulAchievable achievable);
 
-    void setPlayerState(AchievablePlayer player, StatefulAchievable achievable, Map<String,Object> state) throws ExecutionException;
+    void setPlayerState(AchievablePlayer player, StatefulAchievable achievable, Map<String,Object> state, boolean persist) throws ExecutionException;
+
+    default void setPlayerState(AchievablePlayer player, StatefulAchievable achievable, Map<String,Object> state) throws ExecutionException {
+        setPlayerState(player, achievable, state, true);
+    }
 
     Map<String, Object> getStaticState(StatefulAchievable achievable);
 
