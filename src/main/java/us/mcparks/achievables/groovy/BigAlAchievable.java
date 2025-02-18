@@ -65,14 +65,14 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
 
     @Override
     public boolean isSatisfied(AchievablePlayer player) {
-        ScriptThisObject obj = new ScriptThisObject(player, getPlayerState(player), getStaticState(), null);
+        ScriptThisObject obj = new ScriptThisObject(player, this::getInitialPlayerState, this::getInitialStaticState, getPlayerState(player), getStaticState(), null);
         return satisfiedScript.rehydrate(null, obj, obj).call();
     }
 
     public boolean isDisqualified(AchievablePlayer player) {
         if (disqualifiedScript == null) return false;
 
-        ScriptThisObject obj = new ScriptThisObject(player, getPlayerState(player), getStaticState(), null);
+        ScriptThisObject obj = new ScriptThisObject(player, this::getInitialPlayerState, this::getInitialStaticState, getPlayerState(player), getStaticState(), null);
         return disqualifiedScript.rehydrate(null, obj, obj).call();
     }
 
@@ -83,7 +83,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
             try {
                 staticEventHandlers.get(trigger.getType()).forEach(
                         script -> {
-                            ScriptThisObject obj = new ScriptThisObject(null, null, getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
+                            ScriptThisObject obj = new ScriptThisObject(null, this::getInitialPlayerState, this::getInitialStaticState, null, getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
                             script.rehydrate(null, obj, obj).call();
                             try {
                                 Achievables.getInstance().getAchievableManager().setStaticState(this, obj.shared);
@@ -139,7 +139,7 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
             if (eventHandlers.containsKey(trigger.getType())) {
                 eventHandlers.get(trigger.getType()).forEach(
                         script -> {
-                            ScriptThisObject obj = new ScriptThisObject(player, getPlayerState(player), getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
+                            ScriptThisObject obj = new ScriptThisObject(player, this::getInitialPlayerState, this::getInitialStaticState, getPlayerState(player), getStaticState(), ((EventAchievableTrigger) trigger).getEvent());
                             script.rehydrate(null, obj, obj).call();
                             try {
                                 Achievables.getInstance().getAchievableManager().setPlayerState(player, this, obj.state, savePlayerState);
@@ -220,20 +220,26 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
     }
 
 
-    @AllArgsConstructor
-    class ScriptThisObject {
+    static class ScriptThisObject {
         final AchievablePlayer player;
         final InitialStateBackedMap state;
         final InitialStateBackedMap shared;
         final Event event;
 
-        ScriptThisObject(AchievablePlayer player, Map<String,Object> state, Map<String,Object> shared, Event event) {
-            this(player, new InitialStateBackedMap(state, BigAlAchievable.this::getInitialPlayerState), new InitialStateBackedMap(shared, BigAlAchievable.this::getInitialStaticState), event);
+        ScriptThisObject(AchievablePlayer player, Supplier<Map<String, Object>> initialPlayerStateSupplier, Supplier<Map<String, Object>> initialStaticStateSupplier, Map<String,Object> state, Map<String,Object> shared, Event event) {
+            this(player, new InitialStateBackedMap(state, initialPlayerStateSupplier), new InitialStateBackedMap(shared, initialStaticStateSupplier), event);
+        }
+
+        ScriptThisObject(AchievablePlayer player, InitialStateBackedMap state, InitialStateBackedMap shared, Event event) {
+            this.player = player;
+            this.state = state;
+            this.shared = shared;
+            this.event = event;
         }
 
     }
 
-    class InitialStateBackedMap extends HashMap<String, Object> {
+    static class InitialStateBackedMap extends HashMap<String, Object> {
         Supplier<Map<String,Object>> getInitialState;
 
         public InitialStateBackedMap(Map<String, Object> currentState, Supplier<Map<String, Object>> initialState) {
