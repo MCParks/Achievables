@@ -24,8 +24,8 @@ import java.util.logging.Level;
 
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class BigAlAchievable extends AbstractStatefulAchievable implements BackfillableAchievable {
-    Closure<Boolean> satisfiedScript;
-    Closure<Boolean> disqualifiedScript;
+    List<Closure<Boolean>> satisfiedScripts;
+    List<Closure<Boolean>> disqualifiedScripts;
     Multimap<AchievableTrigger.Type, Closure> eventHandlers;
     Multimap<AchievableTrigger.Type, Closure> staticEventHandlers;
 
@@ -37,10 +37,10 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
     @EqualsAndHashCode.Include
     UUID uuid;
 
-    public BigAlAchievable(UUID uuid, Map<String, Object> initialState, Map<String, Object> initialStaticState, Closure<Boolean> isSatisfied, Closure<Boolean> isDisqualified, Closure backfillScript, EventClosureScript... eventScripts) {
+    public BigAlAchievable(UUID uuid, Map<String, Object> initialState, Map<String, Object> initialStaticState, List<Closure<Boolean>> isSatisfiedScripts, List<Closure<Boolean>> isDisqualifiedScripts, Closure backfillScript, EventClosureScript... eventScripts) {
         super(AchievableGsonManager.getGson().toJson(initialState), AchievableGsonManager.getGson().toJson(initialStaticState));
-        this.satisfiedScript = isSatisfied;
-        this.disqualifiedScript = isDisqualified;
+        this.satisfiedScripts = isSatisfiedScripts;
+        this.disqualifiedScripts = isDisqualifiedScripts;
         this.uuid = uuid;
         this.eventHandlers = HashMultimap.create();
         this.staticEventHandlers = HashMultimap.create();
@@ -66,14 +66,26 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
     @Override
     public boolean isSatisfied(AchievablePlayer player) {
         ScriptThisObject obj = new ScriptThisObject(player, this::getInitialPlayerState, this::getInitialStaticState, getPlayerState(player), getStaticState(), null);
-        return satisfiedScript.rehydrate(null, obj, obj).call();
+
+        for (Closure<Boolean> script : satisfiedScripts) {
+            if (!script.rehydrate(null, obj, obj).call()) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public boolean isDisqualified(AchievablePlayer player) {
-        if (disqualifiedScript == null) return false;
+        if (disqualifiedScripts == null || disqualifiedScripts.isEmpty()) return false;
 
         ScriptThisObject obj = new ScriptThisObject(player, this::getInitialPlayerState, this::getInitialStaticState, getPlayerState(player), getStaticState(), null);
-        return disqualifiedScript.rehydrate(null, obj, obj).call();
+
+        for (Closure<Boolean> script : disqualifiedScripts) {
+            if (script.rehydrate(null, obj, obj).call()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -194,8 +206,8 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
                 .uuid(uuid)
                 .withInitialState(getInitialPlayerState())
                 .withInitialStaticState(getInitialStaticState())
-                .addSatisfiedScript(satisfiedScript)
-                .addDisqualifiedScript(disqualifiedScript)
+                .addSatisfiedScripts(satisfiedScripts)
+                .addDisqualifiedScripts(disqualifiedScripts)
                 .setBackfillScript(backfillScript)
                 .addEventHandlers(eventHandlers.entries().stream().map(entry -> {
                     try {
@@ -318,10 +330,24 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
             return this;
         }
 
+        public Builder addSatisfiedScripts(List<Closure<Boolean>> scripts) {
+            if (scripts == null) return this;
+
+            this.isSatisfied.addAll(scripts);
+            return this;
+        }
+
         public Builder addDisqualifiedScript(Closure<Boolean> script) {
             if (script == null) return this;
 
             this.isDisqualified.add(script);
+            return this;
+        }
+
+        public Builder addDisqualifiedScripts(List<Closure<Boolean>> scripts) {
+            if (scripts == null) return this;
+
+            this.isDisqualified.addAll(scripts);
             return this;
         }
 
@@ -347,43 +373,10 @@ public class BigAlAchievable extends AbstractStatefulAchievable implements Backf
             }
 
             return new BigAlAchievable(uuid, initialState, initialStaticState,
-                    andClosures(isSatisfied),
-                    isDisqualified.isEmpty() ? null : orClosures(isDisqualified),
+                    isSatisfied,
+                    isDisqualified.isEmpty() ? null : isDisqualified,
                     backfillScript,
                     eventScripts.toArray(new EventClosureScript[0]));
-        }
-
-        /**
-         * Combines a list of closures into a single closure that returns true if all closures return true.
-         * @param closures A list of dehydrated closures
-         * @return A single closure that returns true if all closures return true
-         */
-        private Closure<Boolean> andClosures(List<Closure<Boolean>> closures) {
-            return new Closure<Boolean>(null) {
-                @Override
-                public Boolean call() {
-                    for (Closure<Boolean> closure : closures) {
-                        if (!closure.rehydrate(getDelegate(), getOwner(), getThisObject()).call()) {
-                            return false;
-                        }
-                    }
-                    return true;
-                }
-            };
-        }
-
-        private Closure<Boolean> orClosures(List<Closure<Boolean>> closures) {
-            return new Closure<Boolean>(null) {
-                @Override
-                public Boolean call() {
-                    for (Closure<Boolean> closure : closures) {
-                        if (closure.rehydrate(getDelegate(), getOwner(), getThisObject()).call()) {
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-            };
         }
 
     }
