@@ -162,4 +162,234 @@ To change the `state` of the achievement, simply write `state.<variableName> = <
 
 The examples given above include events specific to MCParks. There is some assembly required if you wish to use this library for your own Minecraft server, video game, or other JVM project.
 
-_Documentation forthcoming_
+## Basic Integration Steps
+
+### 1. Add Achievables as a Dependency
+
+Add the Achievables library to your build configuration:
+
+#### For Gradle:
+```groovy
+dependencies {
+    implementation 'us.mcparks:achievables:1.0.0' // Replace with the actual version
+}
+```
+
+#### For Maven:
+```xml
+<dependency>
+    <groupId>us.mcparks</groupId>
+    <artifactId>achievables</artifactId>
+    <version>1.0.0</version> <!-- Replace with the actual version -->
+</dependency>
+```
+
+### 2. Implement the AchievableManager Interface
+
+Create a class that implements `us.mcparks.achievables.AchievableManager`. This class will be responsible for managing the lifecycle of achievements and processing triggers.
+
+```java
+public class YourAchievableManager implements us.mcparks.achievables.AchievableManager {
+    // Implementation of required methods
+    // ...
+}
+```
+
+### 3. Initialize the Achievables System
+
+In your application startup code, initialize the Achievables system:
+
+```java
+// Initialize with your implementation of AchievableManager
+Achievables.initialize(yourAchievableManager);
+
+// Set logging
+Achievables.getInstance().setLogger(yourLogger);
+
+// Configure metadata builder (optional)
+Achievables.getInstance().setAchievableMetaBuilderSupplier(() -> YourAchievementMeta.builder());
+
+// Configure JSON serialization/deserialization for your player type
+Achievables.customizeGson(gsonBuilder -> 
+    gsonBuilder.registerTypeAdapter(AchievablePlayer.class, new YourPlayerDeserializer()));
+Achievables.customizeGson(gsonBuilder -> 
+    gsonBuilder.registerTypeAdapter(AchievablePlayer.class, new YourPlayerSerializer()));
+```
+
+## Key Components to Implement
+
+### 1. Player Representation
+
+Create a class that implements `AchievablePlayer` to represent your game's players:
+
+```java
+public class YourPlayer implements AchievablePlayer {
+    // Player implementation
+}
+```
+
+Create serializer and deserializer for your player class:
+
+```java
+public class YourPlayerSerializer implements JsonSerializer<AchievablePlayer> {
+    @Override
+    public JsonElement serialize(AchievablePlayer player, Type type, JsonSerializationContext context) {
+        // Convert YourPlayer to JSON
+    }
+}
+
+public class YourPlayerDeserializer implements JsonDeserializer<AchievablePlayer> {
+    @Override
+    public AchievablePlayer deserialize(JsonElement json, Type type, JsonDeserializationContext context) {
+        // Convert JSON to YourPlayer
+    }
+}
+```
+
+### 2. Event System
+
+Define your game's events and map them to the Achievables event system:
+
+```java
+public class YourGameEvent implements us.mcparks.achievables.events.Event {
+    // Event implementation
+}
+
+public class YourPlayerJumpEvent extends YourGameEvent {
+    // Player jump event implementation
+}
+
+public class YourItemCollectEvent extends YourGameEvent {
+    // Item collect event implementation
+}
+```
+
+Implement the `getEventClass` method in your AchievableManager:
+
+```java
+@Override
+public Class<? extends Event> getEventClass(String eventClassName) {
+    // Map event class names to your game's event classes
+    switch(eventClassName) {
+        case "PlayerJumpEvent": return YourPlayerJumpEvent.class;
+        case "ItemCollectEvent": return YourItemCollectEvent.class;
+        // Add more mappings as needed (more likely: do this dynamically with reflection)
+        default: return null;
+    }
+}
+```
+
+### 3. State Persistence
+
+Implement methods to store and retrieve achievement state:
+
+```java
+@Override
+public void setPlayerState(AchievablePlayer player, StatefulAchievable achievable, Map<String,Object> state, boolean persist) {
+    // Store the player's state for the achievable
+    // If persist is true, save to your persistent storage (database, etc)
+}
+
+@Override
+public Map<String,Object> getPlayerState(AchievablePlayer player, StatefulAchievable achievable) {
+    // Retrieve the player's state for the achievable from your storage
+}
+```
+
+### 4. Achievement Completion Tracking
+
+Implement methods to track completed achievements:
+
+```java
+@Override
+public void completeAchievable(Achievable achievable, AchievablePlayer player) {
+    // Mark the achievable as completed for the player
+    // Store this information in your persistent storage (database, etc)
+    // Trigger any rewards or notifications
+}
+
+@Override
+public boolean isCompleted(Achievable achievable, AchievablePlayer player) {
+    // Check if the player has completed the achievable
+}
+```
+
+
+
+## Loading and Registering Achievables
+
+Your `AchievableManager` needs a data structure to hold the loaded achievables. It is recommended
+to use a `Multimap<AchievableTrigger.Type, Achievable>` to index the achievables by their trigger type to performantly handle event triggers.
+```java
+// in your AchievableManager
+Multimap<AchievableTrigger.Type, Achievable> achievables = Multimaps.synchronizedSetMultimap(HashMultimap.create());
+
+public void registerAchievable(Achievable achievable) {
+        for (AchievableTrigger.Type triggerType : achievable.getTriggers()) {
+            //System.out.println("Registering achievable " + achievable.getUUID().toString() + "with trigger " + triggerType.toString());
+            achievables.put(triggerType, achievable);
+        }
+    }
+
+public void unregisterAchievable(Achievable achievable) {
+    for (AchievableTrigger.Type triggerType : achievable.getTriggers()) {
+        achievables.remove(triggerType, achievable);
+    }
+}
+
+```
+Load your BIGAL achievement definitions and register them with your manager:
+
+```java
+List<String> bigAlFileContents = // Load your BIGAL files;
+
+for (String fileContent : bigAlFileContents) {
+    // Parse the BIGAL file content
+    AchievableWithMeta parsedAchievable = BigalsIntegratedGroovyAchievementLanguage.interpret(fileContent);
+    //
+    
+    // Register the achievable with your manager
+    yourAchievableManager.registerAchievable(parsedAchievable.getAchievable());
+
+    // you might want to use the metadata for other purposes! We use it to display the achievement in the GUI, keep track of the rewards, determine whether or not the file should be activated, etc.
+}
+
+```
+
+## Processing Events and Triggers
+
+To process game events and convert them to achievement triggers:
+
+```java
+// In your event handling system
+public void onYourGameEvent(YourGameEvent event) {
+    // Convert to an Achievable Trigger
+    AchievableTrigger trigger = new AchievableTrigger(
+        AchievableTrigger.Type.EVENT, 
+        event,
+        (YourPlayer) event.getPlayer()
+    );
+    
+    // Process the trigger
+    yourAchievableManager.processTrigger(trigger);
+}
+```
+
+
+```java
+// In your AchievableManager implementation
+@Override
+public void processTrigger(AchievableTrigger trigger) {
+    // Check if the trigger matches any registered achievements
+    for (Achievable achievable : registeredAchievables.get(trigger.getType())) {
+        try {
+            achievable.process(trigger);
+        } catch (Exception e) {
+            // do whatever you want with caught exceptions
+        }
+        
+    }
+}
+```
+
+You may wish to set up a designated thread to process triggers in the background, especially if your game has a lot of events firing frequently. This will help keep your main game loop responsive. 
