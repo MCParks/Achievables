@@ -166,7 +166,9 @@ The examples given above include events specific to MCParks. There is some assem
 
 ### 1. Add Achievables as a Dependency
 
-Add the Achievables library to your build configuration:
+Add the Achievables library to your build configuration.
+
+NOTE: this hasn't actually been added to any public repositories yet. If you would like it to be, open an issue!
 
 #### For Gradle:
 ```groovy
