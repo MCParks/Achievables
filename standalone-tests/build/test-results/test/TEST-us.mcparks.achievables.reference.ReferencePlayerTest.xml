@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="us.mcparks.achievables.reference.ReferencePlayerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2025-05-20T19:35:30.944Z" hostname="fv-az2210-510" time="0.005">
+  <properties/>
+  <testcase name="testToString()" classname="us.mcparks.achievables.reference.ReferencePlayerTest" time="0.001"/>
+  <testcase name="testConstructorAndGetters()" classname="us.mcparks.achievables.reference.ReferencePlayerTest" time="0.001"/>
+  <testcase name="testEqualsAndHashCode()" classname="us.mcparks.achievables.reference.ReferencePlayerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

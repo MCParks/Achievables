@@ -232,8 +232,7 @@ public class AchievablesCLI {
         
         // Create and submit the event
         TestEvent event = new TestEvent(type, player, data);
-        AchievableTrigger trigger = new EventAchievableTrigger(
-                new AchievableTrigger.Type("TestEvent"), event);
+        AchievableTrigger trigger = new EventAchievableTrigger(event);
         
         manager.processTrigger(trigger);
         System.out.println("Submitted event: " + event);

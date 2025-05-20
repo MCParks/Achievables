@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="us.mcparks.achievables.reference.ReferenceAchievableManagerTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2025-05-20T19:35:30.892Z" hostname="fv-az2210-510" time="0.047">
+  <properties/>
+  <testcase name="testPlayerManagement()" classname="us.mcparks.achievables.reference.ReferenceAchievableManagerTest" time="0.042"/>
+  <testcase name="testRegisterEventClass()" classname="us.mcparks.achievables.reference.ReferenceAchievableManagerTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[May 20, 2025 7:35:30 PM us.mcparks.achievables.reference.ReferenceAchievableManager addPlayer
+INFO: Added player: Player{id='player1', name='TestPlayer1'}
+May 20, 2025 7:35:30 PM us.mcparks.achievables.reference.ReferenceAchievableManager addPlayer
+INFO: Added player: Player{id='player2', name='TestPlayer2'}
+May 20, 2025 7:35:30 PM us.mcparks.achievables.reference.ReferenceAchievableManager removePlayer
+INFO: Removed player: Player{id='player1', name='TestPlayer1'}
+May 20, 2025 7:35:30 PM us.mcparks.achievables.reference.ReferenceAchievableManager registerEventClass
+INFO: Registered event class: TestEvent
+]]></system-err>
+</testsuite>
