@@ -1,0 +1,38 @@
+// Example BIGAL script for the reference implementation
+// This is a simple achievable that tracks counters for different events
+
+syntaxVersion 0
+
+achievement {
+    name "Event Counter"
+    description "Track the number of events a player has participated in"
+    difficulty 1
+    reward "None"
+    
+    state {
+        eventCount = 0
+        testEventCount = 0
+    }
+    
+    staticState {
+        totalEventsProcessed = 0
+    }
+    
+    activators {
+        state.eventCount >= 5
+    }
+    
+    events {
+        on("TestEvent") {
+            // Increment counters
+            state.eventCount++
+            state.testEventCount++
+            
+            // Also track in static state
+            staticState.totalEventsProcessed++
+            
+            println "Processed TestEvent: ${event.data} for player ${event.applicablePlayer}"
+            println "Player has now processed ${state.eventCount} total events"
+        }
+    }
+}

@@ -5,6 +5,7 @@ import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ImportCustomizer
 import us.mcparks.achievables.dsl.meta.AchievableWithMeta
 import us.mcparks.achievables.dsl.meta.MetaBuilder
+import us.mcparks.achievables.dsl.meta.DefaultMetaBuilder
 import us.mcparks.achievables.groovy.BigAlAchievable
 import us.mcparks.achievables.dsl.v1_0.AchievementDslV0
 import us.mcparks.achievables.utils.GroovyEvaluator
@@ -98,7 +99,7 @@ public final class BigalsIntegratedGroovyAchievementLanguage {
     static GroovyEvaluator bigalEvaluator = createEvaluator("${AchievementDslV0.class.getName()}")
     static GroovyEvaluator versionEvaluator = createEvaluator("${VersionDsl.class.getName()}")
 
-    static Supplier<MetaBuilder<?>> metaBuilderSupplier = MetaBuilder::new
+    static Supplier<MetaBuilder<?>> metaBuilderSupplier = DefaultMetaBuilder::new
 
     static GroovyEvaluator createEvaluator(String... classNames) {
         def importCustomizer = new ImportCustomizer()
